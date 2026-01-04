@@ -1,12 +1,13 @@
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'font:GET_FONT_FILES') {
-    try {
-      const fonts = await fetchFontFilesFromCSS(request.cssUrl)
-      sendResponse({ success: true, fonts })
-    } catch (error) {
-      console.error('Error fetching font files:', error)
-      sendResponse({ success: false, error: error.message })
-    }
+    fetchFontFilesFromCSS(request.cssUrl)
+      .then(fonts => {
+        sendResponse({ success: true, fonts })
+      })
+      .catch(error => {
+        console.error('Error fetching font files:', error)
+        sendResponse({ success: false, error: error.message })
+      })
     return true
   }
 })

@@ -8,28 +8,35 @@ import { useEffect, useState } from 'react'
 import { twMerge } from 'tailwind-merge'
 
 const systemFonts = await chrome?.fontSettings?.getFontList()
-console.log(systemFonts)
+const popularSystemFonts = [
+  { name: 'Arial', family: 'Arial, sans-serif' },
+  { name: 'Helvetica', family: 'Helvetica, sans-serif' },
+  { name: 'Verdana', family: 'Verdana, sans-serif' },
+  { name: 'Tahoma', family: 'Tahoma, sans-serif' },
+  { name: 'Trebuchet MS', family: 'Trebuchet MS, sans-serif' },
+  { name: 'Impact', family: 'Impact, sans-serif' },
+  { name: 'Times New Roman', family: 'Times New Roman, serif' },
+  { name: 'Georgia', family: 'Georgia, serif' },
+  { name: 'Palatino', family: 'Palatino, serif' },
+  { name: 'Courier New', family: 'Courier New, monospace' },
+  { name: 'Comic Sans MS', family: 'Comic Sans MS, cursive' },
+]
 
 const tabs = [
   {
     name: 'System Fonts',
     value: 'system',
     fonts: [
-      // TODO (filipv): apply system fonts, set popular first
-      { name: 'Arial', family: 'Arial, sans-serif' },
-      { name: 'Times New Roman', family: 'Times New Roman, serif' },
-      { name: 'Courier New', family: 'Courier New, monospace' },
-      { name: 'Georgia', family: 'Georgia, serif' },
-      { name: 'Verdana', family: 'Verdana, sans-serif' },
-      { name: 'Trebuchet MS', family: 'Trebuchet MS, sans-serif' },
-      { name: 'Impact', family: 'Impact, sans-serif' },
-      { name: 'Comic Sans MS', family: 'Comic Sans MS, cursive' },
+      ...popularSystemFonts,
+      ...systemFonts
+        .map(font => ({ name: font.fontId, family: font.fontId }))
+        .filter(font => !popularSystemFonts.find(pf => pf.name === font.name)),
     ],
   },
   {
     name: 'Google Fonts',
     value: 'google',
-    fonts: googleFonts.slice(0, 10),
+    fonts: googleFonts.slice(0, 20),
   },
   {
     name: 'Custom Fonts',
@@ -103,65 +110,94 @@ export function App() {
     }
   }
 
-  async function selectFont(font) {
+  async function selectFont(font, type) {
     setSelectedFont(font)
 
-    const [tab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
+    // TODO (filipv): split and refactor this logic
+    if (type === 'system') {
+      const [tab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
 
-    if (!tab) {
-      return
-    }
-
-    const fontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(font.family)}&display=swap`
-
-    try {
-      const results = await chrome.scripting.executeScript({
+      if (!tab) {
+        return
+      }
+      await chrome?.scripting?.executeScript({
         target: { tabId: tab.id },
         func: fontFamily => {
-          const styleId = `font-face-injection-${fontFamily.replace(/\s+/g, '-')}`
-          const styleElement = document.getElementById(styleId)
-          return styleElement !== null
+          const style = document.createElement('style')
+          style.id = 'custom-font-override'
+          style.textContent = `
+            * {
+              font-family: ${fontFamily} !important;
+            }
+            
+            p, span, div, h1, h2, h3, h4, h5, h6, a, li, td, th, label, button, input, textarea, select {
+              font-family: ${fontFamily} !important;
+            }
+          `
+          document.head.appendChild(style)
         },
         args: [font.family],
       })
+      return
+    }
 
-      const fontStyleExists = results[0].result
+    if (type === 'google') {
+      const [tab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
 
-      if (fontStyleExists) {
-        await chrome?.scripting?.executeScript({
-          target: { tabId: tab.id },
-          func: applyFont,
-          args: [font.family],
-        })
+      if (!tab) {
         return
       }
 
-      const response = await chrome.runtime.sendMessage({
-        action: 'font:GET_FONT_FILES',
-        cssUrl: fontUrl,
-      })
+      const fontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(font.family)}&display=swap`
 
-      if (!response.success) {
-        // show notifications
-        throw new Error(response.error || 'Failed to fetch font files')
-      }
+      try {
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: fontFamily => {
+            const styleId = `font-face-injection-${fontFamily.replace(/\s+/g, '-')}`
+            const styleElement = document.getElementById(styleId)
+            return styleElement !== null
+          },
+          args: [font.family],
+        })
 
-      function injectFont(fontFamily, fontCss) {
-        let style = document.createElement('style')
-        style.id = `font-face-injection-${fontFamily.replace(/\s+/g, '-')}`
-        style.textContent = fontCss
-        document.head.appendChild(style)
-      }
+        const fontStyleExists = results[0].result
 
-      function applyFont(fontFamily) {
-        const existingElement = document.getElementById('custom-font-override')
-        if (existingElement) {
-          existingElement.remove()
+        if (fontStyleExists) {
+          await chrome?.scripting?.executeScript({
+            target: { tabId: tab.id },
+            func: applyFont,
+            args: [font.family],
+          })
+          return
         }
 
-        const style = document.createElement('style')
-        style.id = 'custom-font-override'
-        style.textContent = `
+        const response = await chrome.runtime.sendMessage({
+          action: 'font:GET_FONT_FILES',
+          cssUrl: fontUrl,
+        })
+
+        if (!response.success) {
+          // show notifications
+          throw new Error(response.error || 'Failed to fetch font files')
+        }
+
+        function injectFont(fontFamily, fontCss) {
+          let style = document.createElement('style')
+          style.id = `font-face-injection-${fontFamily.replace(/\s+/g, '-')}`
+          style.textContent = fontCss
+          document.head.appendChild(style)
+        }
+
+        function applyFont(fontFamily) {
+          const existingElement = document.getElementById('custom-font-override')
+          if (existingElement) {
+            existingElement.remove()
+          }
+
+          const style = document.createElement('style')
+          style.id = 'custom-font-override'
+          style.textContent = `
           * {
             font-family: ${fontFamily} !important;
           }
@@ -170,22 +206,23 @@ export function App() {
             font-family: ${fontFamily} !important;
           }
         `
-        document.head.appendChild(style)
-      }
+          document.head.appendChild(style)
+        }
 
-      await chrome?.scripting?.executeScript({
-        target: { tabId: tab.id },
-        func: injectFont,
-        args: [font.family, response.fonts.css],
-      })
-      await chrome?.scripting?.executeScript({
-        target: { tabId: tab.id },
-        func: applyFont,
-        args: [font.family],
-      })
-    } catch (error) {
-      console.error('Error injecting font:', error)
-      // add notification for error
+        await chrome?.scripting?.executeScript({
+          target: { tabId: tab.id },
+          func: injectFont,
+          args: [font.family, response.fonts.css],
+        })
+        await chrome?.scripting?.executeScript({
+          target: { tabId: tab.id },
+          func: applyFont,
+          args: [font.family],
+        })
+      } catch (error) {
+        console.error('Error injecting font:', error)
+        // add notification for error
+      }
     }
   }
 
@@ -254,11 +291,11 @@ export function App() {
                         key={font.name}
                         isSelected={selectedFont?.name === font.name}
                         font={font}
-                        onPointerDown={() => selectFont(font)}
+                        onPointerDown={() => selectFont(font, tab.value)}
                         onKeyDown={event => {
                           if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault()
-                            selectFont(font)
+                            selectFont(font, tab.value)
                           }
                         }}>
                         <span className="text-lg">{font.name}</span>
@@ -276,11 +313,11 @@ export function App() {
                           'bg-primary hover:bg-primary text-primary-foreground hover:text-primary-foreground',
                       )}
                       style={{ fontFamily: font.family }}
-                      onPointerDown={() => selectFont(font)}
+                      onPointerDown={() => selectFont(font, tab.value)}
                       onKeyDown={event => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault()
-                          selectFont(font)
+                          selectFont(font, tab.value)
                         }
                       }}>
                       <span className="text-lg">{font.name}</span>
