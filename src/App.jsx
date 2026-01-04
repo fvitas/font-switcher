@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input.jsx'
 import { Tabs, TabsContent, TabsContents, TabsList, TabsTrigger } from '@/components/ui/motion-tabs.jsx'
 import { googleFonts } from '@/google-fonts.js'
 import { isEmpty } from 'lodash'
-import { SearchIcon, XIcon } from 'lucide-react'
+import { SearchIcon, SlidersHorizontalIcon, Upload, XIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { twMerge } from 'tailwind-merge'
 
@@ -106,88 +106,130 @@ export function App() {
   async function selectFont(font) {
     setSelectedFont(font)
 
-    // const [currentTab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
-    // chrome.tabs.sendMessage(currentTab?.id, {
-    //   action: 'injectFont',
-    //   fontUrl: `https://fonts.googleapis.com/css2?family=${font.family}&display=swap`,
-    // })
-
-    debugger
-    //  if google font
     const [tab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
 
     if (!tab) {
       return
     }
 
-    const fontUrl = `https://fonts.googleapis.com/css2?family=${font.family}&display=swap`
+    const fontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(font.family)}&display=swap`
 
-    await chrome?.scripting?.executeScript({
-      target: { tabId: tab.id },
-      func: injectAndApplyFont,
-      args: [fontUrl, font.family],
-    })
+    try {
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: fontFamily => {
+          const styleId = `font-face-injection-${fontFamily.replace(/\s+/g, '-')}`
+          const styleElement = document.getElementById(styleId)
+          return styleElement !== null
+        },
+        args: [font.family],
+      })
 
-    function injectAndApplyFont(fontUrl, fontFamily) {
-      const link = document.createElement('link')
-      link.rel = 'stylesheet'
-      link.href = fontUrl
-      document.head.appendChild(link)
+      const fontStyleExists = results[0].result
 
-      const style = document.createElement('style')
-      style.id = 'custom-font-override'
-      style.textContent = `
-    * {
-      font-family: ${fontFamily} !important;
-    }
-    
-    /* More specific selectors for stubborn elements */
-    body, body * {
-      font-family: ${fontFamily} !important;
-    }
-    
-    /* Target common text elements */
-    p, span, div, h1, h2, h3, h4, h5, h6, a, li, td, th, label, button, input, textarea {
-      font-family: ${fontFamily} !important;
-    }
-  `
-
-      const existing = document.getElementById('custom-font-override')
-      if (existing) {
-        existing.remove()
+      if (fontStyleExists) {
+        await chrome?.scripting?.executeScript({
+          target: { tabId: tab.id },
+          func: applyFont,
+          args: [font.family],
+        })
+        return
       }
 
-      document.head.appendChild(style)
+      const response = await chrome.runtime.sendMessage({
+        action: 'font:GET_FONT_FILES',
+        cssUrl: fontUrl,
+      })
+
+      if (!response.success) {
+        // show notifications
+        throw new Error(response.error || 'Failed to fetch font files')
+      }
+
+      function injectFont(fontFamily, fontCss) {
+        let style = document.createElement('style')
+        style.id = `font-face-injection-${fontFamily.replace(/\s+/g, '-')}`
+        style.textContent = fontCss
+        document.head.appendChild(style)
+      }
+
+      function applyFont(fontFamily) {
+        const existingElement = document.getElementById('custom-font-override')
+        if (existingElement) {
+          existingElement.remove()
+        }
+
+        const style = document.createElement('style')
+        style.id = 'custom-font-override'
+        style.textContent = `
+          * {
+            font-family: ${fontFamily} !important;
+          }
+          
+          p, span, div, h1, h2, h3, h4, h5, h6, a, li, td, th, label, button, input, textarea, select {
+            font-family: ${fontFamily} !important;
+          }
+        `
+        document.head.appendChild(style)
+      }
+
+      await chrome?.scripting?.executeScript({
+        target: { tabId: tab.id },
+        func: injectFont,
+        args: [font.family, response.fonts.css],
+      })
+      await chrome?.scripting?.executeScript({
+        target: { tabId: tab.id },
+        func: applyFont,
+        args: [font.family],
+      })
+    } catch (error) {
+      console.error('Error injecting font:', error)
+      // add notification for error
     }
   }
 
   return (
-    <div className="bg-card text-card-foreground m-0 flex w-lg flex-col gap-4 p-6 py-6">
-      <div className="flex items-center justify-between">
-        <img src="/favicon/logo.svg" alt="Font Swapper logo" className="w-8" />
+    <div className="bg-card text-card-foreground m-0 flex w-96 flex-col gap-4 p-6 py-6">
+      {/*<div className="flex items-center justify-between">*/}
+      {/*  <img src="/favicon/logo.svg" alt="Font Swapper logo" className="w-8" />*/}
 
-        <h2 className="text-2xl font-semibold">Font Swapper</h2>
+      {/*  <h2 className="font-[Bonheur_Royale] text-5xl leading-none">Font Switcher</h2>*/}
 
-        <Button variant="ghost" size="icon">
-          <XIcon className="h-5 w-5" />
-        </Button>
-      </div>
+      {/*  <Button variant="ghost" size="icon" onClick={() => window.close()}>*/}
+      {/*    <XIcon />*/}
+      {/*  </Button>*/}
+      {/*</div>*/}
 
-      <div className="relative">
-        <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 peer-disabled:opacity-50">
-          <SearchIcon className="size-4" />
-          <span className="sr-only">Search</span>
+      <div className="flex gap-2">
+        <img src="/favicon/logo.svg" alt="Font Swapper logo" className="mr-2 w-8" />
+
+        <div className="relative">
+          <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 peer-disabled:opacity-50">
+            <SearchIcon className="size-4" />
+            <span className="sr-only">Search</span>
+          </div>
+
+          <div className="flex gap-2">
+            <Input
+              id="search"
+              name="search"
+              type="search"
+              placeholder="Search..."
+              className="peer px-9 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none [&::-webkit-search-results-button]:appearance-none [&::-webkit-search-results-decoration]:appearance-none"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <Button variant="ghost" size="icon">
+              <SlidersHorizontalIcon />
+              <span className="sr-only">Settings</span>
+            </Button>
+          </div>
         </div>
 
-        <Input
-          id="search"
-          name="search"
-          type="search"
-          placeholder="Search..."
-          className="peer px-9 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none [&::-webkit-search-results-button]:appearance-none [&::-webkit-search-results-decoration]:appearance-none"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+        <Button variant="ghost" size="icon" onClick={() => window.close()}>
+          <XIcon />
+        </Button>
       </div>
 
       <Tabs defaultValue="system" className="gap-4" onValueChange={setActiveTab}>
@@ -201,7 +243,7 @@ export function App() {
 
         <TabsContents className="bg-background h-full">
           {tabs.map(tab => (
-            <TabsContent key={tab.value} value={tab.value}>
+            <TabsContent key={tab.value} value={tab.value} className="h-[300px] overflow-auto">
               {isEmpty(tab.fonts) ? (
                 <div className="text-muted-foreground py-8 text-center">No fonts found</div>
               ) : (

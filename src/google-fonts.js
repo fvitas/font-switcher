@@ -1,3 +1,5 @@
+// filter out emoji, music
+
 export const googleFonts = [
   {
     name: 'Roboto',
