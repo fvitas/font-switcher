@@ -5,9 +5,9 @@ import { googleFonts } from '@/google-fonts.js'
 import { isEmpty } from 'lodash'
 import { SearchIcon, SlidersHorizontalIcon, Upload, XIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Virtuoso } from 'react-virtuoso'
 import { twMerge } from 'tailwind-merge'
 
-const systemFonts = await chrome?.fontSettings?.getFontList()
 const popularSystemFonts = [
   { name: 'Arial', family: 'Arial, sans-serif' },
   { name: 'Helvetica', family: 'Helvetica, sans-serif' },
@@ -21,6 +21,7 @@ const popularSystemFonts = [
   { name: 'Courier New', family: 'Courier New, monospace' },
   { name: 'Comic Sans MS', family: 'Comic Sans MS, cursive' },
 ]
+const systemFonts = await chrome?.fontSettings?.getFontList()
 
 const tabs = [
   {
@@ -36,7 +37,7 @@ const tabs = [
   {
     name: 'Google Fonts',
     value: 'google',
-    fonts: googleFonts.slice(0, 20),
+    fonts: googleFonts,
   },
   {
     name: 'Custom Fonts',
@@ -44,21 +45,31 @@ const tabs = [
   },
 ]
 
-function loadFont(fontFamily) {
+function loadGoogleFont(fontFamily) {
+  const googleFontId = `google-font-${fontFamily}`
+  const fontLinkExists = document.getElementById(googleFontId)
+
+  if (fontLinkExists) {
+    return
+  }
+
   const link = document.createElement('link')
   link.rel = 'stylesheet'
+  link.id = googleFontId
   link.href = `https://fonts.googleapis.com/css2?family=${fontFamily}&display=swap`
   document.head.appendChild(link)
 }
 
-function GoogleFontButton({ key, isSelected, font, onPointerDown, onKeyDown, children }) {
+function FontButton({ font, fontType, isSelected, onPointerDown, onKeyDown }) {
   useEffect(() => {
-    loadFont(font.family)
+    if (fontType === 'google') {
+      loadGoogleFont(font.family)
+    }
   }, [])
 
   return (
     <Button
-      key={key}
+      key={font.name}
       variant="ghost"
       size="icon"
       className={twMerge(
@@ -68,7 +79,7 @@ function GoogleFontButton({ key, isSelected, font, onPointerDown, onKeyDown, chi
       style={{ fontFamily: font.family }}
       onPointerDown={onPointerDown}
       onKeyDown={onKeyDown}>
-      {children}
+      <span className="text-lg">{font.name}</span>
     </Button>
   )
 }
@@ -284,46 +295,29 @@ export function App() {
               {isEmpty(tab.fonts) ? (
                 <div className="text-muted-foreground py-8 text-center">No fonts found</div>
               ) : (
-                tab?.fonts?.map(font => {
-                  if (tab.value === 'google') {
-                    return (
-                      <GoogleFontButton
-                        key={font.name}
-                        isSelected={selectedFont?.name === font.name}
-                        font={font}
-                        onPointerDown={() => selectFont(font, tab.value)}
-                        onKeyDown={event => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault()
-                            selectFont(font, tab.value)
-                          }
-                        }}>
-                        <span className="text-lg">{font.name}</span>
-                      </GoogleFontButton>
-                    )
-                  }
-                  return (
-                    <Button
-                      key={font.name}
-                      variant="ghost"
-                      size="icon"
-                      className={twMerge(
-                        'text-foreground hover:bg-primary/30 my-0.5 w-full cursor-pointer justify-start rounded-md p-4 text-left transition-colors',
-                        selectedFont?.name === font.name &&
-                          'bg-primary hover:bg-primary text-primary-foreground hover:text-primary-foreground',
-                      )}
-                      style={{ fontFamily: font.family }}
-                      onPointerDown={() => selectFont(font, tab.value)}
+                <Virtuoso
+                  style={{ height: '100%' }}
+                  data={tab?.fonts}
+                  itemContent={(index, font) => (
+                    <FontButton
+                      key={'font-button-' + index}
+                      font={font}
+                      fontType={tab.value}
+                      isSelected={selectedFont?.name === font.name}
+                      onPointerDown={event => {
+                        if (event.button === 0) {
+                          selectFont(font, tab.value)
+                        }
+                      }}
                       onKeyDown={event => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault()
                           selectFont(font, tab.value)
                         }
-                      }}>
-                      <span className="text-lg">{font.name}</span>
-                    </Button>
-                  )
-                })
+                      }}
+                    />
+                  )}
+                />
               )}
             </TabsContent>
           ))}
