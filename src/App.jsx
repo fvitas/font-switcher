@@ -1,9 +1,17 @@
 import { Button } from '@/components/ui/button.jsx'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog.jsx'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog.jsx'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.jsx'
 import { Input } from '@/components/ui/input.jsx'
@@ -13,7 +21,21 @@ import { Slider } from '@/components/ui/slider.jsx'
 import { googleFonts } from '@/google-fonts.js'
 import Fuse from 'fuse.js'
 import { isEmpty } from 'lodash'
-import { SearchIcon, SettingsIcon, SlidersHorizontalIcon, Upload, XIcon } from 'lucide-react'
+import {
+  BugIcon,
+  CaseSensitiveIcon,
+  CoffeeIcon,
+  ExternalLinkIcon,
+  InfoIcon,
+  MoonIcon,
+  MoreVerticalIcon,
+  SearchIcon,
+  SlidersHorizontalIcon,
+  SparklesIcon,
+  SunIcon,
+  Upload,
+  XIcon,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 import { twMerge } from 'tailwind-merge'
@@ -121,14 +143,150 @@ function FontButton({ font, fontType, isSelected, searchMatch, onPointerDown, on
       variant="ghost"
       size="icon"
       className={twMerge(
-        'text-foreground hover:bg-primary/30 my-0.5 w-full cursor-pointer justify-start rounded-md p-4 text-left transition-colors',
-        isSelected && 'bg-primary hover:bg-primary text-primary-foreground hover:text-primary-foreground',
+        'text-foreground hover:bg-primary/30 dark:hover:bg-primary/50 my-0.5 w-full cursor-pointer justify-start rounded-md p-4 text-left transition-colors',
+        isSelected &&
+          'bg-primary hover:bg-primary dark:hover:bg-primary text-primary-foreground hover:text-primary-foreground',
       )}
       style={{ fontFamily: font.family }}
       onPointerDown={onPointerDown}
       onKeyDown={onKeyDown}>
       <span className="text-lg">{searchMatch ? highlightText(searchMatch) : font.name}</span>
     </Button>
+  )
+}
+
+export function AppMenu() {
+  const [theme, setTheme] = useState('light')
+  const [aboutOpen, setAboutOpen] = useState(false)
+
+  function toggleTheme() {
+    const newTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(newTheme)
+    document.documentElement.classList.toggle('dark')
+  }
+
+  function handleCloseApp() {
+    window.close()
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <MoreVerticalIcon />
+            <span className="sr-only">Open menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+            {theme === 'light' ? (
+              <>
+                <MoonIcon className="size-4" />
+                <span>Dark Mode</span>
+              </>
+            ) : (
+              <>
+                <SunIcon className="size-4" />
+                <span>Light Mode</span>
+              </>
+            )}
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem onClick={() => setAboutOpen(true)} className="cursor-pointer">
+            <InfoIcon className="size-4" />
+            <span>About</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() =>
+              window.open('https://github.com/fvitas/font-switcher/issues/new?template=%F0%9F%9A%80-feature-request.md')
+            }>
+            <SparklesIcon className="size-4" />
+            <span>Request a feature</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() =>
+              window.open('https://github.com/fvitas/font-switcher/issues/new?template=%F0%9F%90%9B-bug-report.md')
+            }>
+            <BugIcon className="size-4" />
+            <span>Report a bug</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem className="cursor-pointer">
+            <a
+              href=""
+              className="flex items-center gap-2"
+              onClick={() => window.open('https://www.buymeacoffee.com/filipvitas')}>
+              <CoffeeIcon className="size-4" />
+              <span>Buy me a coffee / Donate</span>
+            </a>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            onClick={handleCloseApp}
+            className="focus:bg-destructive/10 dark:focus:bg-destructive/30 cursor-pointer">
+            <XIcon className="size-4" />
+            <span>Close extension</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* About Modal */}
+      <Dialog open={aboutOpen} onOpenChange={setAboutOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Font Switcher</DialogTitle>
+            <DialogDescription>Free · Open Source</DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 space-y-2">
+            <div className="flex justify-between">
+              <span>Version</span>
+              <span>1.0.0</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Developed by</span>
+              <a
+                href="https://x.com/vitasdev"
+                rel="noreferrer"
+                target="_blank"
+                className="flex items-center gap-1 transition hover:opacity-75">
+                Filip Vitas
+                <ExternalLinkIcon className="size-4" />
+              </a>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Source code</span>
+              <span>
+                <a
+                  href="https://github.com/fvitas/font-switcher"
+                  rel="noreferrer"
+                  target="_blank"
+                  className="flex items-center gap-1 transition hover:opacity-75">
+                  <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="size-4">
+                    <title>GitHub</title>
+                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+                  </svg>
+                  <span>GitHub</span>
+                  <ExternalLinkIcon className="size-4" />
+                </a>
+              </span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -370,7 +528,7 @@ export function App() {
             <form>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="icon">
-                  <SettingsIcon />
+                  <CaseSensitiveIcon className="size-5" />
                   <span className="sr-only">Settings</span>
                 </Button>
               </DialogTrigger>
@@ -415,11 +573,7 @@ export function App() {
               </DialogContent>
             </form>
           </Dialog>
-
-          <Button variant="ghost" size="icon" onClick={() => window.close()}>
-            <XIcon />
-            <span className="sr-only">Close</span>
-          </Button>
+          <AppMenu />
         </div>
       </div>
 
@@ -459,7 +613,7 @@ export function App() {
             ))}
           </TabsList>
 
-          <TabsContents className="bg-background h-full">
+          <TabsContents className="h-full">
             {tabs.map(tab => (
               <TabsContent key={tab.value} value={tab.value} className="h-[300px] overflow-auto">
                 {isEmpty(tab.fonts) ? (
@@ -496,27 +650,58 @@ export function App() {
       )}
 
       {activeTab === 'custom' && (
-        <div className="border-border mb-4 space-y-3 rounded-md border p-4">
-          <Input type="text" placeholder="Font name" value={fontName} onChange={e => setFontName(e.target.value)} />
-          <div className="space-y-2">
-            <Input type="text" placeholder="Font URL" value={fontUrl} onChange={e => setFontUrl(e.target.value)} />
-            <Button onClick={handleAddFontUrl} className="w-full" disabled={!fontName || !fontUrl}>
-              Add from URL
-            </Button>
-          </div>
-          <div className="relative">
-            <Input
-              type="file"
-              accept=".ttf,.otf,.woff,.woff2"
-              onChange={handleFileUpload}
-              disabled={!fontName}
-              className="cursor-pointer"
-            />
-            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-              <Upload className="h-4 w-4" />
+        <>
+          {/*<Card*/}
+          {/*  className={`relative cursor-pointer border-2 border-dashed transition-colors ${*/}
+          {/*    isDragging ? 'border-primary bg-accent' : 'border-border hover:border-muted-foreground'*/}
+          {/*  }`}*/}
+          {/*  onDragOver={handleDragOver}*/}
+          {/*  onDragLeave={handleDragLeave}*/}
+          {/*  onDrop={handleDrop}*/}
+          {/*  onClick={handleClick}>*/}
+          {/*  <div className="flex flex-col items-center justify-center px-6 py-20">*/}
+          {/*    <div*/}
+          {/*      className={`mb-4 flex h-16 w-16 items-center justify-center rounded-full transition-colors ${*/}
+          {/*        isDragging ? 'bg-primary/20' : 'bg-muted'*/}
+          {/*      }`}>*/}
+          {/*      <UploadI className={`h-8 w-8 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />*/}
+          {/*    </div>*/}
+
+          {/*    <h3 className="text-foreground mb-2 text-lg font-medium">*/}
+          {/*      {isDragging ? 'Drop files here' : 'Drag & drop files here'}*/}
+          {/*    </h3>*/}
+          {/*    <p className="text-muted-foreground mb-4 text-sm">or click to browse from your computer</p>*/}
+
+          {/*    <Button variant="secondary" size="sm" type="button">*/}
+          {/*      Choose Files*/}
+          {/*    </Button>*/}
+          {/*  </div>*/}
+
+          {/*  <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileInput} />*/}
+          {/*</Card>*/}
+
+          <div className="border-border mb-4 space-y-3 rounded-md border p-4">
+            <Input type="text" placeholder="Font name" value={fontName} onChange={e => setFontName(e.target.value)} />
+            <div className="space-y-2">
+              <Input type="text" placeholder="Font URL" value={fontUrl} onChange={e => setFontUrl(e.target.value)} />
+              <Button onClick={handleAddFontUrl} className="w-full" disabled={!fontName || !fontUrl}>
+                Add from URL
+              </Button>
+            </div>
+            <div className="relative">
+              <Input
+                type="file"
+                accept=".ttf,.otf,.woff,.woff2"
+                onChange={handleFileUpload}
+                disabled={!fontName}
+                className="cursor-pointer"
+              />
+              <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                <Upload className="size-4" />
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/*<div className="max-h-[400px] space-y-2 overflow-y-auto">*/}
