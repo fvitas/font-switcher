@@ -1,8 +1,11 @@
 import { Button } from '@/components/ui/button.jsx'
+import { Card } from '@/components/ui/card.jsx'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -243,7 +246,7 @@ export function AppMenu() {
       {/* About Modal */}
       <Dialog open={aboutOpen} onOpenChange={setAboutOpen}>
         <DialogContent>
-          <DialogHeader>
+          <DialogHeader className="text-left">
             <DialogTitle>Font Switcher</DialogTitle>
             <DialogDescription>Free · Open Source</DialogDescription>
           </DialogHeader>
@@ -287,6 +290,215 @@ export function AppMenu() {
         </DialogContent>
       </Dialog>
     </>
+  )
+}
+
+function FontSettingsDialog() {
+  // TODO (filipv): get values from the page
+  const [fontSize, setFontSize] = useState(16)
+  const [lineHeight, setLineHeight] = useState(1.5)
+  const [wordSpacing, setWordSpacing] = useState(0)
+
+  async function handleFontSizeChange(newFontSize) {
+    setFontSize(newFontSize)
+
+    const [tab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: fontSize => {
+        const oldStyle = document.getElementById('custom-font-size-style')
+        if (oldStyle) {
+          oldStyle.remove()
+        }
+
+        const style = document.createElement('style')
+        style.id = 'custom-font-size-style' // Give it a unique ID
+        style.textContent = `
+          body {
+            font-size: ${fontSize}px !important;
+          }
+          body * {
+            font-size: inherit !important;
+          }
+        `
+
+        document.head.appendChild(style)
+      },
+      args: [newFontSize],
+    })
+  }
+
+  async function handleLineHeightChange(newLineHeight) {
+    setLineHeight(newLineHeight)
+
+    const [tab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: lineHeight => {
+        const oldStyle = document.getElementById('custom-line-height-style')
+        if (oldStyle) {
+          oldStyle.remove()
+        }
+
+        const style = document.createElement('style')
+        style.id = 'custom-line-height-style'
+        style.textContent = `
+          body {
+            line-height: ${lineHeight} !important;
+          }
+          body * {
+            line-height: inherit !important;
+          }
+        `
+        document.head.appendChild(style)
+      },
+      args: [newLineHeight],
+    })
+  }
+
+  async function handleWordSpacingChange(newWordSpacing) {
+    setWordSpacing(newWordSpacing)
+
+    const [tab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: lineHeight => {
+        const oldStyle = document.getElementById('custom-word-spacing-style')
+        if (oldStyle) {
+          oldStyle.remove()
+        }
+
+        const style = document.createElement('style')
+        style.id = 'custom-word-spacing-style'
+        style.textContent = `
+          body {
+            word-spacing: ${lineHeight} !important;
+          }
+          body * {
+            word-spacing: inherit !important;
+          }
+        `
+        document.head.appendChild(style)
+      },
+      args: [newWordSpacing],
+    })
+  }
+
+  async function handleFontReset() {
+    setFontSize(16)
+    setLineHeight(1.5)
+    setWordSpacing(0)
+
+    const [tab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        document.getElementById('custom-font-size-style')?.remove()
+        document.getElementById('custom-line-height-style')?.remove()
+        document.getElementById('custom-word-spacing-style')?.remove()
+      },
+    })
+  }
+
+  return (
+    <Dialog>
+      <form>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <CaseSensitiveIcon className="size-5" />
+            <span className="sr-only">Settings</span>
+          </Button>
+        </DialogTrigger>
+
+        <DialogContent className="w-[350px]" showCloseButton={false}>
+          <DialogHeader className="text-left">
+            <DialogTitle>Settings</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name-1">Font size</Label>
+              <div className="flex gap-2">
+                <Slider
+                  min={10}
+                  max={40}
+                  step={1}
+                  value={[fontSize]}
+                  onValueChange={([value]) => handleFontSizeChange(value)}
+                />
+                <Input
+                  id="name-1"
+                  name="name"
+                  type="number"
+                  className="w-16"
+                  value={fontSize}
+                  min={10}
+                  max={40}
+                  onChange={event => handleFontSizeChange(Number(event.target.value))}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="name-2">Line height</Label>
+              <div className="flex gap-2">
+                <Slider
+                  min={0}
+                  max={3}
+                  step={0.1}
+                  value={[lineHeight]}
+                  onValueChange={([value]) => handleLineHeightChange(value)}
+                />
+                <Input
+                  id="name-2"
+                  name="name"
+                  type="number"
+                  value={lineHeight}
+                  className="w-16"
+                  min={0}
+                  max={3}
+                  step={0.1}
+                  onChange={event => handleLineHeightChange(Number(event.target.value))}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="name-3">Word spacing</Label>
+              <div className="flex gap-2">
+                <Slider
+                  min={-2}
+                  max={4}
+                  step={0.1}
+                  defaultValue={[wordSpacing]}
+                  value={[wordSpacing]}
+                  onValueChange={([value]) => handleWordSpacingChange(value)}
+                />
+                <Input
+                  id="name-3"
+                  name="name"
+                  type="number"
+                  value={wordSpacing}
+                  className="w-16"
+                  min={-2}
+                  max={4}
+                  step={0.1}
+                  onChange={event => handleWordSpacingChange(Number(event.target.value))}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" onClick={handleFontReset}>
+                Reset font settings
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </form>
+    </Dialog>
   )
 }
 
@@ -482,22 +694,6 @@ export function App() {
             />
           </div>
 
-          {/*<Select defaultValue="All">*/}
-          {/*  <SelectTrigger>*/}
-          {/*    <SelectValue placeholder="Select category" />*/}
-          {/*  </SelectTrigger>*/}
-
-          {/*  <SelectContent>*/}
-          {/*    <SelectGroup>*/}
-          {/*      <SelectItem value="All">All</SelectItem>*/}
-          {/*      <SelectItem value="Sans">Sans</SelectItem>*/}
-          {/*      <SelectItem value="Serif">Serif</SelectItem>*/}
-          {/*      <SelectItem value="Slab">Slab</SelectItem>*/}
-          {/*      <SelectItem value="Display">Display</SelectItem>*/}
-          {/*      <SelectItem value="Handwritten">Handwritten</SelectItem>*/}
-          {/*    </SelectGroup>*/}
-          {/*  </SelectContent>*/}
-          {/*</Select>*/}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               {/*<InputGroupButton variant="ghost" className="!pr-1.5 text-xs">*/}
@@ -524,87 +720,43 @@ export function App() {
         </div>
 
         <div className="ml-4 flex gap-1">
-          <Dialog>
-            <form>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <CaseSensitiveIcon className="size-5" />
-                  <span className="sr-only">Settings</span>
-                </Button>
-              </DialogTrigger>
-
-              <DialogContent className="w-[350px]" showCloseButton={false}>
-                <DialogHeader className="text-left">
-                  <DialogTitle>Settings</DialogTitle>
-                </DialogHeader>
-
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name-3">Font size</Label>
-                    <div className="flex gap-2">
-                      <Slider defaultValue={[33]} max={100} step={1} />
-                      <Input id="name-3" name="name" type="number" value={33} className="w-20" />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="name-1">Letter spacing</Label>
-                    <div className="flex gap-2">
-                      <Slider defaultValue={[33]} max={100} step={1} />
-                      <Input id="name-1" name="name" type="number" value={33} className="w-20" />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="name-2">Line spacing</Label>
-                    <div className="flex gap-2">
-                      <Slider defaultValue={[33]} max={100} step={1} />
-                      <Input id="name-2" name="name" type="number" value={33} className="w-20" />
-                    </div>
-                  </div>
-                </div>
-
-                {/*<DialogFooter>*/}
-                {/*  <DialogClose asChild>*/}
-                {/*    <Button variant="outline">Cancel</Button>*/}
-                {/*  </DialogClose>*/}
-                {/*  <Button type="submit">Apply changes</Button>*/}
-                {/*</DialogFooter>*/}
-              </DialogContent>
-            </form>
-          </Dialog>
+          <FontSettingsDialog />
           <AppMenu />
         </div>
       </div>
 
       {search.length >= 2 ? (
         <div className="h-[300px] overflow-auto">
-          <Virtuoso
-            style={{ height: '100%' }}
-            data={results}
-            itemContent={(index, result) => (
-              <FontButton
-                key={'font-button-' + index}
-                font={result.item}
-                searchMatch={result?.matches?.at(0)}
-                isSelected={selectedFont?.name === result.item.name}
-                onPointerDown={event => {
-                  if (event.button === 0) {
-                    selectFont(result.item)
-                  }
-                }}
-                onKeyDown={event => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    selectFont(result.item)
-                  }
-                }}
-              />
-            )}
-          />
+          {isEmpty(results) ? (
+            <div className="text-muted-foreground flex h-full items-center justify-center pb-10">No fonts found</div>
+          ) : (
+            <Virtuoso
+              style={{ height: '100%' }}
+              data={results}
+              itemContent={(index, result) => (
+                <FontButton
+                  key={'font-button-' + index}
+                  font={result.item}
+                  searchMatch={result?.matches?.at(0)}
+                  isSelected={selectedFont?.name === result.item.name}
+                  onPointerDown={event => {
+                    if (event.button === 0) {
+                      selectFont(result.item)
+                    }
+                  }}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      selectFont(result.item)
+                    }
+                  }}
+                />
+              )}
+            />
+          )}
         </div>
       ) : (
-        <Tabs defaultValue="system" className="gap-4" onValueChange={setActiveTab}>
+        <Tabs value={activeTab} className="gap-4" onValueChange={setActiveTab}>
           <TabsList className="w-full">
             {tabs.map(tab => (
               <TabsTrigger key={tab.value} value={tab.value}>
@@ -616,9 +768,7 @@ export function App() {
           <TabsContents className="h-full">
             {tabs.map(tab => (
               <TabsContent key={tab.value} value={tab.value} className="h-[300px] overflow-auto">
-                {isEmpty(tab.fonts) ? (
-                  <div className="text-muted-foreground py-8 text-center">No fonts found</div>
-                ) : (
+                {!isEmpty(tab.fonts) && (
                   <Virtuoso
                     style={{ height: '100%' }}
                     data={tab?.fonts}
@@ -701,6 +851,24 @@ export function App() {
               </div>
             </div>
           </div>
+
+          <Card
+            className={`relative cursor-pointer border-2 border-dashed transition-colors ${
+              false ? 'border-primary bg-accent' : 'border-border hover:border-muted-foreground'
+            }`}
+            onDragOver={() => {}}
+            onDragLeave={() => {}}
+            onDrop={() => {}}
+            onClick={() => {}}>
+            <div className="flex items-center justify-center gap-3 px-6 py-6">
+              <Upload className={`h-5 w-5 ${false ? 'text-primary' : 'text-muted-foreground'}`} />
+              <p className="text-foreground text-sm font-medium">
+                {false ? 'Drop more files here' : 'Drop more files or click to browse'}
+              </p>
+            </div>
+
+            <input ref={null} type="file" multiple className="hidden" onChange={() => {}} />
+          </Card>
         </>
       )}
 
