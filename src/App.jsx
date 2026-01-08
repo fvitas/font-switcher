@@ -495,6 +495,10 @@ function FontSettingsDialog() {
                 Reset font settings
               </Button>
             </DialogClose>
+
+            <DialogClose asChild>
+              <Button>Apply changes</Button>
+            </DialogClose>
           </DialogFooter>
         </DialogContent>
       </form>
