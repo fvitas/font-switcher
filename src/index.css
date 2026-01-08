@@ -123,4 +123,15 @@
         @apply selection:bg-primary/80 selection:text-primary-foreground;
         font-size: var(--text-sm) !important;
     }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
 }
