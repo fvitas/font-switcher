@@ -461,7 +461,7 @@ export function App() {
             id="search"
             name="font-switcher-search"
             autocomplete="on"
-            type="search"
+            type="text"
             placeholder="Search..."
             value={search}
             onChange={event => setSearch(event.target.value)}
