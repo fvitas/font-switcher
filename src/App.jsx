@@ -460,7 +460,9 @@ export function App() {
           <InputGroupInput
             id="search"
             name="font-switcher-search"
-            autocomplete="on"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
             type="text"
             placeholder="Search..."
             value={search}
