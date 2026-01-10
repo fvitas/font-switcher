@@ -45,9 +45,9 @@ function loadGoogleFont(fontFamily) {
   document.head.appendChild(link)
 }
 
-export function FontButton({ font, fontType, isSelected, searchMatch, onPointerDown, onKeyDown }) {
+export function FontButton({ font, isSelected, searchMatch, onPointerDown, onKeyDown }) {
   useEffect(() => {
-    if (fontType === 'google') {
+    if (font.fontType === 'google') {
       loadGoogleFont(font.family)
     }
   }, [])

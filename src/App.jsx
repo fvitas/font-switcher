@@ -1,4 +1,5 @@
 import { AppMenu } from '@/AppMenu.jsx'
+import { Badge } from '@/components/ui/badge.jsx'
 import { Button } from '@/components/ui/button.jsx'
 import { Card } from '@/components/ui/card.jsx'
 import {
@@ -7,14 +8,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.jsx'
-import { Input } from '@/components/ui/input.jsx'
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group.jsx'
 import { Tabs, TabsContent, TabsContents, TabsList, TabsTrigger } from '@/components/ui/motion-tabs.jsx'
 import { FontButton } from '@/FontButton.jsx'
 import { FontSettingsDialog } from '@/FontSettingsDialog.jsx'
 import { googleFonts } from '@/google-fonts.js'
 import Fuse from 'fuse.js'
 import { isEmpty } from 'lodash'
-import { FileTypeIcon, SearchIcon, SlidersHorizontalIcon, Upload } from 'lucide-react'
+import { CheckIcon, FileTypeIcon, SearchIcon, SlidersHorizontalIcon, Upload, XIcon } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 import { twMerge } from 'tailwind-merge'
@@ -34,22 +35,31 @@ const popularSystemFonts = [
 ]
 const systemFonts = await chrome?.fontSettings?.getFontList()
 
-// TODO (filipv): check for duplicates in fonts
+const FONT_TYPES = {
+  SYSTEM: 'system',
+  GOOGLE: 'google',
+}
+
+// TODO (filipv): I saw some duplicates
+const allSystemFonts = [
+  ...popularSystemFonts,
+  ...systemFonts
+    .map(font => ({ name: font.fontId, family: font.fontId }))
+    .filter(font => !popularSystemFonts.find(pf => pf.name === font.name)),
+].map(font => ({ ...font, fontType: FONT_TYPES.SYSTEM }))
+
+const allGoogleFonts = googleFonts.map(font => ({ ...font, fontType: FONT_TYPES.GOOGLE }))
+
 const tabs = [
   {
     name: 'System Fonts',
     value: 'system',
-    fonts: [
-      ...popularSystemFonts,
-      ...systemFonts
-        .map(font => ({ name: font.fontId, family: font.fontId }))
-        .filter(font => !popularSystemFonts.find(pf => pf.name === font.name)),
-    ],
+    fonts: allSystemFonts,
   },
   {
     name: 'Google Fonts',
     value: 'google',
-    fonts: googleFonts,
+    fonts: allGoogleFonts,
   },
   {
     name: 'Custom Font',
@@ -57,7 +67,7 @@ const tabs = [
   },
 ]
 
-const fuse = new Fuse([...tabs.flatMap(tab => tab.fonts)], {
+const fuse = new Fuse(allSystemFonts.concat(allGoogleFonts), {
   keys: ['name'],
   threshold: 0.3,
   minMatchCharLength: 2,
@@ -99,17 +109,20 @@ function formatFileSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
-function CustomFontRenderer({ selectedFont }) {
+function CustomFontRenderer({ selectedFont, onFontSelect }) {
   const fileInputRef = useRef(null)
 
   const [isDragging, setIsDragging] = useState(false)
   const [uploadedFile, setUploadedFile] = useState(null)
 
   useEffect(() => {
-    setUploadedFile(null)
+    if (selectedFont) {
+      // TODO (filipv): debug and check this
+      setUploadedFile(null)
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }, [selectedFont])
 
@@ -168,6 +181,7 @@ function CustomFontRenderer({ selectedFont }) {
     // TODO (filipv): verify font
     if (!isEmpty(droppedFiles)) {
       setUploadedFile(droppedFiles.at(0))
+      onFontSelect(null)
     }
   }
 
@@ -177,6 +191,7 @@ function CustomFontRenderer({ selectedFont }) {
 
     if (!isEmpty(selectedFiles)) {
       setUploadedFile(selectedFiles.at(0))
+      onFontSelect(null)
     }
   }
 
@@ -231,42 +246,115 @@ function CustomFontRenderer({ selectedFont }) {
   )
 }
 
-function DynamicTabRenderer({ tab, selectedFont, onFontSelect }) {
-  if (tab.value === 'custom') {
-    return <CustomFontRenderer selectedFont={selectedFont} />
+function VirtualizedFontButtonList({ fonts = [], selectedFont, onFontSelect }) {
+  if (isEmpty(fonts)) {
+    return <div className="text-muted-foreground flex h-full items-center justify-center pb-10">No fonts found</div>
   }
 
-  if (tab.value === 'system' || tab.value === 'google') {
-    if (isEmpty(tab.fonts)) {
-      return <div className="text-muted-foreground flex h-full items-center justify-center pb-10">No fonts loaded</div>
-    }
+  return (
+    <Virtuoso
+      style={{ height: '100%' }}
+      data={fonts}
+      itemContent={(index, font) => (
+        <FontButton
+          key={'font-button-' + index + font.name}
+          font={font}
+          searchMatch={font?.matches?.at(0)}
+          isSelected={selectedFont?.name === font.name}
+          onPointerDown={event => {
+            if (event.button === 0) {
+              onFontSelect(font)
+            }
+          }}
+          onKeyDown={event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              onFontSelect(font)
+            }
+          }}
+        />
+      )}
+    />
+  )
+}
 
-    return (
-      <Virtuoso
-        style={{ height: '100%' }}
-        data={tab?.fonts}
-        itemContent={(index, font) => (
-          <FontButton
-            key={'font-button-' + index}
-            font={font}
-            fontType={tab.value}
-            isSelected={selectedFont?.name === font.name}
-            onPointerDown={event => {
-              if (event.button === 0) {
-                onFontSelect(font, tab.value)
-              }
-            }}
-            onKeyDown={event => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                onFontSelect(font, tab.value)
-              }
-            }}
-          />
-        )}
-      />
-    )
+const fontTypeFilters = ['sans-serif', 'serif', 'monospace', 'handwriting', 'display']
+
+function FontTypeFilterDropdown({ search, activeTab, onFontTypeChange }) {
+  const [selectedFontTypes, setSelectedFontTypes] = useState(new Set())
+  const isAllSelected = selectedFontTypes.size === 0
+
+  function handleToggle(option) {
+    const fontTypes = new Set(selectedFontTypes)
+    fontTypes.has(option) ? fontTypes.delete(option) : fontTypes.add(option)
+
+    setSelectedFontTypes(fontTypes)
+    onFontTypeChange(fontTypes)
   }
+
+  function handleAllToggle() {
+    setSelectedFontTypes(new Set())
+    onFontTypeChange(new Set())
+  }
+
+  if (search.length >= 2 || activeTab !== 'google') {
+    return null
+  }
+
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative flex items-center justify-center">
+          <SlidersHorizontalIcon />
+          {!isAllSelected && (
+            <Badge
+              variant="default"
+              className="absolute top-0 right-0 flex size-4 items-center justify-center p-0 text-xs">
+              {selectedFontTypes.size}
+            </Badge>
+          )}
+          <span className="sr-only">Filter</span>
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent className="w-36">
+        <DropdownMenuItem
+          onSelect={event => event.preventDefault()}
+          onClick={handleAllToggle}
+          className="cursor-pointer">
+          <div className="flex w-full items-center gap-2">
+            <div
+              className={twMerge(
+                'flex h-4 w-4 items-center justify-center rounded border',
+                isAllSelected && 'bg-primary border-primary',
+              )}>
+              {isAllSelected && <CheckIcon className="text-primary-foreground h-3 w-3" />}
+            </div>
+            <span>All</span>
+          </div>
+        </DropdownMenuItem>
+
+        {fontTypeFilters.map(fontType => (
+          <DropdownMenuItem
+            key={fontType}
+            onSelect={event => event.preventDefault()}
+            onClick={() => handleToggle(fontType)}
+            className="cursor-pointer">
+            <div className="flex w-full items-center gap-2">
+              <div
+                className={twMerge(
+                  'flex h-4 w-4 items-center justify-center rounded border',
+                  selectedFontTypes.has(fontType) && 'bg-primary border-primary',
+                )}>
+                {selectedFontTypes.has(fontType) && <CheckIcon className="text-primary-foreground h-3 w-3" />}
+              </div>
+              <span className="capitalize">{fontType}</span>
+            </div>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }
 
 export function App() {
@@ -274,12 +362,19 @@ export function App() {
   const [activeTab, setActiveTab] = useState('system')
   const [selectedFont, setSelectedFont] = useState(null)
 
+  const [filteredGoogleFonts, setFilteredGoogleFonts] = useState([])
+
   let results = []
   if (search.length >= 2) {
-    results = fuse.search(search)
+    results = fuse.search(search).map(result => ({ ...result, ...result.item }))
   }
 
-  async function handleSelectFont(font, fontType = 'system') {
+  async function handleSelectFont(font) {
+    if (!font?.fontType) {
+      setSelectedFont(null)
+      return
+    }
+
     setSelectedFont(font)
 
     const [tab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
@@ -287,7 +382,7 @@ export function App() {
       return
     }
 
-    if (fontType === 'system') {
+    if (font.fontType === 'system') {
       await chrome?.scripting?.executeScript({
         target: { tabId: tab.id },
         func: applyFont,
@@ -296,7 +391,7 @@ export function App() {
       return
     }
 
-    if (fontType === 'google') {
+    if (font.fontType === 'google') {
       const fontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(font.family)}&display=swap`
 
       try {
@@ -348,57 +443,50 @@ export function App() {
     }
   }
 
+  function handleGoogleFontCategoriesFilterChange(selectedCategories) {
+    if (isEmpty(selectedCategories)) {
+      setFilteredGoogleFonts([])
+      return
+    }
+    setFilteredGoogleFonts(allGoogleFonts.filter(font => selectedCategories.has(font.category)))
+  }
+
   return (
     <div className="bg-card text-card-foreground m-0 flex w-96 flex-col gap-4 p-4">
       <div className="flex">
         <img src="/favicon/logo.svg" alt="Font Swapper logo" className="mr-4 w-8" />
 
-        <div className="relative">
-          <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 peer-disabled:opacity-50">
-            <SearchIcon className="size-4" />
-            <span className="sr-only">Search</span>
-          </div>
+        <InputGroup>
+          <InputGroupInput
+            id="search"
+            name="font-switcher-search"
+            autocomplete="on"
+            type="search"
+            placeholder="Search..."
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+          />
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
 
-          <div className="flex gap-2">
-            <Input
-              id="search"
-              name="font-switcher-search"
-              autocomplete="on"
-              type="search"
-              placeholder="Search..."
-              className="peer px-9 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none [&::-webkit-search-results-button]:appearance-none [&::-webkit-search-results-decoration]:appearance-none"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
+          {search.length >= 2 && (
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton size="icon-xs" onClick={() => setSearch('')}>
+                <XIcon />
+                <span className="sr-only">Reset search</span>
+              </InputGroupButton>
+            </InputGroupAddon>
+          )}
+        </InputGroup>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              {/*<InputGroupButton variant="ghost" className="!pr-1.5 text-xs">*/}
-              {/*  Search In... <ChevronDownIcon className="size-3" />*/}
-              {/*</InputGroupButton>*/}
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="absolute inset-y-0.5 right-0.5 flex items-center justify-center peer-disabled:opacity-50"
-                disabled={activeTab !== 'google'}>
-                <SlidersHorizontalIcon />
-                <span className="sr-only">Filter</span>
-              </Button>
-            </DropdownMenuTrigger>
+        <div className="ml-2 flex gap-1">
+          <FontTypeFilterDropdown
+            search={search}
+            activeTab={activeTab}
+            onFontTypeChange={handleGoogleFontCategoriesFilterChange}
+          />
 
-            <DropdownMenuContent align="end" className="[--radius:0.95rem]">
-              <DropdownMenuItem>All</DropdownMenuItem>
-              <DropdownMenuItem>Sans</DropdownMenuItem>
-              <DropdownMenuItem>Serif</DropdownMenuItem>
-              <DropdownMenuItem>Slab</DropdownMenuItem>
-              <DropdownMenuItem>Display</DropdownMenuItem>
-              <DropdownMenuItem>Handwritten</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div className="ml-4 flex gap-1">
           <FontSettingsDialog />
           <AppMenu />
         </div>
@@ -406,33 +494,11 @@ export function App() {
 
       {search.length >= 2 ? (
         <div className="h-[300px] overflow-auto">
-          {isEmpty(results) ? (
-            <div className="text-muted-foreground flex h-full items-center justify-center pb-10">No fonts found</div>
-          ) : (
-            <Virtuoso
-              style={{ height: '100%' }}
-              data={results}
-              itemContent={(index, result) => (
-                <FontButton
-                  key={'font-button-' + index}
-                  font={result.item}
-                  searchMatch={result?.matches?.at(0)}
-                  isSelected={selectedFont?.name === result.item.name}
-                  onPointerDown={event => {
-                    if (event.button === 0) {
-                      handleSelectFont(result.item)
-                    }
-                  }}
-                  onKeyDown={event => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      handleSelectFont(result.item)
-                    }
-                  }}
-                />
-              )}
-            />
-          )}
+          <VirtualizedFontButtonList
+            fonts={results}
+            selectedFont={selectedFont}
+            onFontSelect={result => handleSelectFont(result.item)}
+          />
         </div>
       ) : (
         <Tabs value={activeTab} className="gap-4" onValueChange={setActiveTab}>
@@ -447,7 +513,23 @@ export function App() {
           <TabsContents className="h-full">
             {tabs.map(tab => (
               <TabsContent key={tab.value} value={tab.value} className="h-[300px] overflow-auto">
-                <DynamicTabRenderer tab={tab} selectedFont={selectedFont} onFontSelect={handleSelectFont} />
+                {tab.value === 'custom' && (
+                  <CustomFontRenderer selectedFont={selectedFont} onFontSelect={() => handleSelectFont(null)} />
+                )}
+                {tab.value === 'system' && (
+                  <VirtualizedFontButtonList
+                    fonts={tab.fonts}
+                    selectedFont={selectedFont}
+                    onFontSelect={handleSelectFont}
+                  />
+                )}
+                {tab.value === 'google' && (
+                  <VirtualizedFontButtonList
+                    fonts={!isEmpty(filteredGoogleFonts) ? filteredGoogleFonts : tab.fonts}
+                    selectedFont={selectedFont}
+                    onFontSelect={handleSelectFont}
+                  />
+                )}
               </TabsContent>
             ))}
           </TabsContents>
