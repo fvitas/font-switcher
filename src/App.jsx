@@ -109,6 +109,44 @@ function formatFileSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
+function verifyFontFile(file) {
+  const fileExtension = file.name.split('.').at(-1).toLowerCase()
+
+  return fileExtension === 'ttf' || fileExtension === 'otf' || fileExtension === 'woff' || fileExtension === 'woff2'
+}
+
+async function loadFontFile(uploadedFile) {
+  const [tab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
+  if (!tab) {
+    return
+  }
+
+  const reader = new FileReader()
+  reader.readAsDataURL(uploadedFile)
+
+  reader.onload = async function (event) {
+    const fontName = uploadedFile.name.split('.').at(0)
+    const fontCss = `
+      @font-face {
+        font-family: ${fontName};
+        src: url('${event.target.result}');
+      }
+    `
+
+    // TODO (filipv): check if exits before injection
+    await chrome?.scripting?.executeScript({
+      target: { tabId: tab.id },
+      func: injectFont,
+      args: [fontName, fontCss],
+    })
+    await chrome?.scripting?.executeScript({
+      target: { tabId: tab.id },
+      func: applyFont,
+      args: [fontName],
+    })
+  }
+}
+
 function CustomFontRenderer({ selectedFont, onFontSelect }) {
   const fileInputRef = useRef(null)
 
@@ -117,7 +155,6 @@ function CustomFontRenderer({ selectedFont, onFontSelect }) {
 
   useEffect(() => {
     if (selectedFont) {
-      // TODO (filipv): debug and check this
       setUploadedFile(null)
 
       if (fileInputRef.current) {
@@ -125,43 +162,6 @@ function CustomFontRenderer({ selectedFont, onFontSelect }) {
       }
     }
   }, [selectedFont])
-
-  useEffect(() => {
-    // TODO (filipv): move it into separate func out of useeffect
-    async function loadFontFile() {
-      const [tab] = await chrome?.tabs?.query({ active: true, currentWindow: true })
-      if (!tab) {
-        return
-      }
-
-      const reader = new FileReader()
-      reader.readAsDataURL(uploadedFile)
-
-      reader.onload = async function (event) {
-        const fontName = uploadedFile.name.split('.').at(0)
-        const fontCss = `
-          @font-face {
-            font-family: ${fontName};
-            src: url('${event.target.result}');
-          }
-        `
-        // TODO (filipv): check if exits before injection
-        await chrome?.scripting?.executeScript({
-          target: { tabId: tab.id },
-          func: injectFont,
-          args: [fontName, fontCss],
-        })
-        await chrome?.scripting?.executeScript({
-          target: { tabId: tab.id },
-          func: applyFont,
-          args: [fontName],
-        })
-      }
-    }
-    if (uploadedFile) {
-      loadFontFile()
-    }
-  }, [uploadedFile])
 
   const handleDragOver = useCallback(event => {
     event.preventDefault()
@@ -177,21 +177,26 @@ function CustomFontRenderer({ selectedFont, onFontSelect }) {
     event.preventDefault()
     setIsDragging(false)
 
-    const droppedFiles = Array.from(event.dataTransfer.files)
-    // TODO (filipv): verify font
-    if (!isEmpty(droppedFiles)) {
-      setUploadedFile(droppedFiles.at(0))
+    const droppedFiles = Array.from(event.dataTransfer.files ?? [])
+    const droppedFile = droppedFiles.at(0)
+    const isValidFontFile = verifyFontFile(droppedFile)
+
+    if (droppedFile && isValidFontFile) {
+      setUploadedFile(droppedFile)
       onFontSelect(null)
+      loadFontFile(droppedFile)
     }
   }
 
   function handleFileInput(event) {
-    const selectedFiles = Array.from(event.target.files || [])
-    // TODO (filipv): verify font
+    const selectedFiles = Array.from(event.target.files ?? [])
+    const selectedFile = selectedFiles.at(0)
+    const isValidFontFile = verifyFontFile(selectedFile)
 
-    if (!isEmpty(selectedFiles)) {
-      setUploadedFile(selectedFiles.at(0))
+    if (selectedFile && isValidFontFile) {
+      setUploadedFile(selectedFile)
       onFontSelect(null)
+      loadFontFile(selectedFile)
     }
   }
 
