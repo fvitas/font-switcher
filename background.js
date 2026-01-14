@@ -5,7 +5,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true, fonts })
       })
       .catch(error => {
-        console.error('Error fetching font files:', error)
         sendResponse({ success: false, error: error.message })
       })
     return true
@@ -57,8 +56,9 @@ async function fetchFontFilesFromCSS(cssUrl) {
       }),
     )
 
-    // Replace URLs in CSS with base 64 data URL
+    // Replace URLs in CSS with base64 data URL
     let modifiedCSS = fontCSSText
+
     fontData.forEach(({ url, dataUrl }) => {
       const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       const regex = new RegExp(`url\\(['"]?${escapedUrl}['"]?\\)`, 'gi')
