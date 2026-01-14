@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FontBlitz - Font Changer",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "author": "Filip Vitas",
   "description": "A browser extension for instantly switching and testing fonts on any website.",
   "icons": {
