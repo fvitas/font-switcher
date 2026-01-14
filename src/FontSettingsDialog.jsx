@@ -15,7 +15,6 @@ import { CaseSensitiveIcon } from 'lucide-react'
 import { useState } from 'react'
 
 export function FontSettingsDialog() {
-  // TODO (filipv): get values from the page
   const [fontSize, setFontSize] = useState(16)
   const [lineHeight, setLineHeight] = useState(1.5)
   const [wordSpacing, setWordSpacing] = useState(0)

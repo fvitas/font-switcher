@@ -40,7 +40,6 @@ const FONT_TYPES = {
   GOOGLE: 'google',
 }
 
-// TODO (filipv): I saw some duplicates
 const allSystemFonts = [
   ...popularSystemFonts,
   ...systemFonts
