@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:website": "vite --mode website",
-    "build": "pnpm run build:chrome && npm run build:firefox && build:website",
+    "build": "pnpm run build:chrome && pnpm run build:firefox && pnpm run build:website",
     "build:chrome": "vite build --mode chrome",
     "build:firefox": "vite build --mode firefox",
     "build:website": "vite build --mode website",
