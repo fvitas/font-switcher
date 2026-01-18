@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FontBlitz - Font Switcher</title>
+
+  <meta name="description" content="A browser extension for instantly switching and testing fonts on any website.">
+
+  <meta name="robots" content="index,follow" />
+  <meta name="googlebot" content="index,follow" />
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="msapplication-starturl" content="/">
+
+  <link rel="icon" href="./icons/logo.svg" type="image/svg+xml" />
+
+  <meta name="theme-color" content="#030712">
+
+  <link rel="chrome-webstore-item"
+        href="https://chromewebstore.google.com/detail/fontblitz-font-changer/ndhikidjijghfocidpnidbgkhioiajde">
+
+  <link rel="stylesheet" href="./style.css">
+
+  <style>
+    @keyframes fadeInUp {
+      from {
+        filter: blur(10px);
+        opacity: 0;
+        transform: translateY(15px);
+      }
+      to {
+        filter: blur(0);
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fontChange {
+      0%, 33% {
+        font-family: Helvetica, sans-serif;
+      }
+      34%, 66% {
+        font-family: Georgia, serif;
+      }
+      67%, 100% {
+        font-family: 'Courier New', monospace;
+      }
+    }
+
+    @keyframes fontChangeBlurCycle {
+      0%, 30% {
+        filter: blur(0px);
+        opacity: 1;
+      }
+      33% {
+        filter: blur(8px);
+        opacity: 0.6;
+      }
+      36%, 63% {
+        filter: blur(0px);
+        opacity: 1;
+      }
+      66% {
+        filter: blur(8px);
+        opacity: 0.6;
+      }
+      69%, 97% {
+        filter: blur(0px);
+        opacity: 1;
+      }
+      100% {
+        filter: blur(8px);
+        opacity: 0.6;
+      }
+    }
+
+    .animate-fadeInUp {
+      animation: fadeInUp 0.4s ease;
+    }
+
+    .animate-fadeInUp-delay-1 {
+      animation: fadeInUp 0.4s ease 0.1s backwards;
+    }
+
+    .animate-fadeInUp-delay-2 {
+      animation: fadeInUp 0.4s ease 0.2s backwards;
+    }
+
+    .animate-fadeInUp-delay-3 {
+      animation: fadeInUp 0.4s ease 0.3s backwards;
+    }
+
+    .animate-fontChange {
+      animation: fontChange 6s infinite, fontChangeBlurCycle 6s infinite;
+    }
+
+    .gradient-bg {
+      background: radial-gradient(circle at 20% 50%, rgba(59, 118, 246, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+    }
+
+    .grid-overlay {
+      background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      mask-image: radial-gradient(ellipse 80% 50% at 50% 50%, black 40%, transparent 100%);
+    }
+
+    .text-gradient {
+      background: linear-gradient(to bottom, #ffffff, #888888);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .final-cta-line::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+    }
+  </style>
+</head>
+
+<body class="bg-black text-white overflow-x-hidden">
+
+<!-- Gradient Background -->
+<div class="gradient-bg fixed w-full h-full top-0 left-0 -z-10"></div>
+
+<!-- Grid Overlay -->
+<div class="grid-overlay fixed top-0 left-0 w-full h-full -z-10"></div>
+
+<!-- Navigation -->
+<nav class="flex justify-between items-center px-[5%] py-6 fixed w-full top-0 z-[1000] backdrop-blur-xl bg-black/80 border-b border-zinc-900">
+  <div class="flex items-end gap-2 text-xl font-semibold tracking-tight">
+    <img src="./icons/logo.svg" class="h-6" alt="FontBlitz logo" />
+    FontBlitz
+  </div>
+
+  <div class="hidden md:flex gap-8 items-center">
+    <a href="#how-it-works"
+       class="text-gray-400 text-[0.95rem] hover:text-white transition-colors"
+       onclick="event.preventDefault(); document.getElementById('how-it-works').scrollIntoView({behavior: 'smooth'});">How it works</a>
+
+    <a href="#features"
+       class="text-gray-400 text-[0.95rem] hover:text-white transition-colors"
+       onclick="event.preventDefault(); document.getElementById('features').scrollIntoView({behavior: 'smooth'});">Features</a>
+
+    <a href="https://github.com/fvitas/fontblitz" target="_blank" class="transition hover:opacity-75">
+      <span class="sr-only">visit GitHub</span>
+      <svg class="size-7 fill-white" viewBox="0 0 24 24">
+        <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+      </svg>
+    </a>
+
+    <a class="px-4 py-2 bg-white text-black rounded-lg font-medium text-sm hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(255,255,255,0.2)] transition-all" href="https://chromewebstore.google.com/detail/fontblitz-font-changer/ndhikidjijghfocidpnidbgkhioiajde" target="_blank">
+      Add to Chrome
+    </a>
+  </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="min-h-screen flex flex-col justify-center items-center text-center px-[5%] pt-32 relative pb-16">
+
+  <div class="max-w-[900px]">
+    <h1 class="text-5xl sm:text-7xl md:text-8xl font-semibold mb-6 tracking-tight text-gradient animate-fadeInUp">
+      Switch fonts on any website in seconds
+    </h1>
+    <p class="text-xl md:text-2xl text-gray-400 mb-10 max-w-[650px] mx-auto animate-fadeInUp-delay-1">
+      Experience the web with typography that matches your style. Instantly transform any website's fonts.
+    </p>
+    <div class="flex gap-4 justify-center flex-wrap animate-fadeInUp-delay-1">
+      <a class="px-8 py-4 bg-white text-black rounded-xl font-medium flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(255,255,255,0.2)] transition-all" href="https://chromewebstore.google.com/detail/fontblitz-font-changer/ndhikidjijghfocidpnidbgkhioiajde" target="_blank">
+        <span>Get FontBlitz now</span>
+        <span>→</span>
+      </a>
+      <!--      <button class="px-8 py-4 bg-transparent text-white border border-zinc-900 rounded-xl font-medium hover:border-gray-500 hover:bg-white/5 transition-all">-->
+      <!--        View Demo-->
+      <!--      </button>-->
+    </div>
+
+    <!-- Browser Extension Links -->
+    <div class="flex gap-6 justify-center items-center mt-8 text-sm text-gray-400 animate-fadeInUp-delay-2">
+      <span class="whitespace-nowrap">Available for:</span>
+      <a class="flex items-center gap-2 hover:text-white transition-colors" href="https://chromewebstore.google.com/detail/fontblitz-font-changer/ndhikidjijghfocidpnidbgkhioiajde" target="_blank">
+        <img class="size-6" alt="Chrome extension logo" src="./icons/chrome.svg" />
+        Chrome
+      </a>
+      <a class="flex items-center gap-2 hover:text-white transition-colors"
+         href="https://addons.mozilla.org/en-US/firefox/addon/fontblitz-font-changer/"
+         target="_blank">
+        <img class="size-6" alt="Firefox extension logo" src="./icons/firefox.svg" />
+        Firefox
+      </a>
+      <a class="flex items-center gap-2 hover:text-white transition-colors grayscale cursor-not-allowed" href="#">
+        <img class="size-6" alt="Edge extension logo" src="./icons/edgechromium.svg" />
+        Edge
+      </a>
+    </div>
+  </div>
+
+  <!-- Demo Window -->
+  <div class="mt-24 relative max-w-[1000px] w-full animate-fadeInUp-delay-3">
+    <div class="bg-zinc-900/80 border border-zinc-900 rounded-2xl overflow-hidden backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+      <div class="flex items-center gap-2 px-4 py-4 border-b border-zinc-900">
+        <div class="w-3 h-3 rounded-full bg-red-400"></div>
+        <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+        <div class="w-3 h-3 rounded-full bg-green-400"></div>
+      </div>
+      <div class="p-12 text-center text-3xl animate-fontChange">
+        The quick brown fox jumps over the lazy dog
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Section -->
+<!--<section class="py-20 px-[5%] text-center">-->
+<!--  <div class="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-[1000px] mx-auto">-->
+<!--    <div class="p-8">-->
+<!--      <div class="text-5xl md:text-6xl font-semibold mb-2 text-gradient">0</div>-->
+<!--      <div class="text-gray-400 text-[0.95rem]">Active Users</div>-->
+<!--    </div>-->
+<!--    <div class="p-8">-->
+<!--      <div class="text-5xl md:text-6xl font-semibold mb-2 text-gradient">2000+</div>-->
+<!--      <div class="text-gray-400 text-[0.95rem]">Font Options</div>-->
+<!--    </div>-->
+<!--    <div class="p-8">-->
+<!--      <div class="text-5xl md:text-6xl font-semibold mb-2 text-gradient">0★</div>-->
+<!--      <div class="text-gray-400 text-[0.95rem]">Average Rating</div>-->
+<!--    </div>-->
+<!--  </div>-->
+<!--</section>-->
+
+<!-- how it works Section -->
+<section class="py-20 px-[5%] max-w-[1400px] mx-auto" id="how-it-works">
+  <div class="text-center mb-20">
+    <div class="text-sm text-blue-500 uppercase tracking-widest mb-4">How it works</div>
+    <h2 class="text-4xl md:text-5xl font-semibold mb-4 tracking-tight">Three steps to better typography</h2>
+  </div>
+
+  <div class="mt-16 grid gap-8 md:grid-cols-3">
+    <div class="relative">
+      <div class="absolute top-8 left-[calc(50%+4rem)] hidden h-px w-[calc(100%-6rem)] bg-gray-700 md:block"></div>
+      <div class="flex flex-col items-center text-center">
+        <div class="flex size-16 items-center justify-center rounded-full border border-gray-700 bg-gray-950 text-xl font-bold text-white">1</div>
+        <h3 class="mt-6 text-xl font-semibold text-white">Install the extension</h3>
+        <p class="mt-2 text-muted-foreground max-w-xs">Add FontBlitz to your browser with a single click. No account required.</p>
+      </div>
+    </div>
+    <div class="relative">
+      <div class="absolute top-8 left-[calc(50%+4rem)] hidden h-px w-[calc(100%-6rem)] bg-gray-700 md:block"></div>
+      <div class="flex flex-col items-center text-center">
+        <div class="flex size-16 items-center justify-center rounded-full border border-gray-700 bg-gray-950 text-xl font-bold text-white">2</div>
+        <h3 class="mt-6 text-xl font-semibold text-white">Browse any website</h3>
+        <p class="mt-2 text-muted-foreground max-w-xs">Navigate to any website and click the FontBlitz icon in your toolbar.</p>
+      </div>
+    </div>
+    <div class="relative">
+      <div class="flex flex-col items-center text-center">
+        <div class="flex size-16 items-center justify-center rounded-full border border-gray-700 bg-gray-950 text-xl font-bold text-white">3</div>
+        <h3 class="mt-6 text-xl font-semibold text-white">Switch fonts instantly</h3>
+        <p class="mt-2 text-muted-foreground max-w-xs">Choose from countless fonts. <br /> See changes instantly.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-20 px-[5%] max-w-7xl mx-auto" id="features">
+  <div class="text-center mb-20">
+    <div class="text-sm text-blue-500 uppercase tracking-widest mb-4">Features</div>
+    <h2 class="text-4xl md:text-5xl font-semibold mb-4 tracking-tight">Built for Power Users</h2>
+    <p class="text-lg md:text-xl text-gray-400">Everything you need to customize typography across the web</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-zinc-900 border border-zinc-900 rounded-xl overflow-hidden">
+    <div class="p-12 md:p-8 bg-gray-950 hover:bg-blue-500/15 transition-colors">
+      <div class="size-12 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center text-2xl mb-6">⚡</div>
+      <h3 class="text-xl font-semibold mb-3">Instant Preview</h3>
+      <p class="text-gray-400 leading-relaxed">
+        See font changes immediately with zero page refresh. Test typography decisions on the fly.</p>
+    </div>
+
+    <div class="p-12 md:p-8 bg-gray-950 hover:bg-blue-500/15 transition-colors">
+      <div class="size-12 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center text-2xl mb-6">🎨</div>
+      <h3 class="text-xl font-semibold mb-3">1500+ Google Fonts</h3>
+      <p class="text-gray-400 leading-relaxed">Access the complete Google Fonts library or upload custom typefaces directly from your browser toolbar.</p>
+    </div>
+
+    <div class="p-12 md:p-8 bg-gray-950 hover:bg-blue-500/15 transition-colors">
+      <div class="size-12 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center text-2xl mb-6">🔒</div>
+      <h3 class="text-xl font-semibold mb-3">Privacy First</h3>
+      <p class="text-gray-400 leading-relaxed">Everything runs locally. No tracking, no analytics, no data collection.</p>
+    </div>
+
+    <div class="p-12 md:p-8 bg-gray-950 hover:bg-blue-500/15 transition-colors">
+      <div class="size-12 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center text-2xl mb-6">🌐</div>
+      <h3 class="text-xl font-semibold mb-3">Works Everywhere</h3>
+      <p class="text-gray-400 leading-relaxed">Compatible with every website. From blogs to web apps, we've got you covered.</p>
+    </div>
+  </div>
+</section>
+
+<!-- testimonials Section -->
+<section class="py-20">
+  <div class="mx-auto max-w-7xl px-6">
+
+    <div class="text-center mb-20">
+      <div class="text-sm text-blue-500 uppercase tracking-widest mb-4">Testimonials</div>
+      <h2 class="text-4xl md:text-5xl font-semibold mb-4 tracking-tight">Loved by type enthusiasts</h2>
+    </div>
+
+    <div class="mt-16 grid gap-6 md:grid-cols-3">
+      <div class="rounded-xl border border-gray-900 bg-gray-950 p-6">
+        <p class="text-white leading-relaxed">“Finally stopped arguing with designers about fonts.”</p>
+        <div class="mt-6 flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-800 text-sm font-medium text-white">FHU</div>
+          <div>
+            <div class="font-medium text-white">Future happy user</div>
+            <div class="text-sm text-muted-foreground">Lead Frontend Engineer</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-gray-900 bg-gray-950 p-6">
+        <p class="text-white leading-relaxed">“I opened it for five minutes… three hours later I was still picking fonts.”</p>
+        <div class="mt-6 flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-800 text-sm font-medium text-white">TPD</div>
+          <div>
+            <div class="font-medium text-white">Totally productive designer</div>
+            <div class="text-sm text-muted-foreground">Head of Design</div>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-xl border border-gray-900 bg-gray-950 p-6">
+        <p class="text-white leading-relaxed">“I switched my Reddit font to Comic Sans and immediately gained 100 karma. Coincidence? I think not.”</p>
+        <div class="mt-6 flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-800 text-sm font-medium text-white">RT</div>
+          <div>
+            <div class="font-medium text-white">Random Typist</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="py-20 px-[5%] text-center">
+  <div class="max-w-[700px] mx-auto p-16 bg-gray-950 border border-gray-900 rounded-2xl relative overflow-hidden final-cta-line">
+    <h2 class="text-3xl md:text-4xl font-semibold mb-4">Start Customizing Today</h2>
+    <p class="text-gray-400 mb-8 text-lg">Join designers, developers and typography enthusiast who use FontBlitz every day. Free forever, no account required.</p>
+
+    <a class="inline-block px-8 py-4 bg-white text-black rounded-xl font-medium items-center gap-2 mx-auto hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(255,255,255,0.2)] transition-all whitespace-nowrap" href="https://chromewebstore.google.com/detail/fontblitz-font-changer/ndhikidjijghfocidpnidbgkhioiajde" target="_blank">
+      <span>Install now — It's free</span>
+      <span>→</span>
+    </a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="py-12 px-[5%] border-t border-zinc-900 text-center text-gray-500 text-sm">
+  <p>© 2026 FontBlitz. Built with precision.</p>
+</footer>
+</body>
+</html>
